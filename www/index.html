@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANYDOWN — YouTube Video Downloader</title>
+<!--
+  ANYDOWN — Capacitor Web Assets
+  ═══════════════════════════════
+  This file is bundled into the Android APK by Capacitor (webDir = "www").
+  The app talks to your deployed Flask backend. Set the server URL in
+  capacitor.config.json under server.url, OR set window.ANYDOWN_SERVER_URL
+  in the <script> block below before the main script runs.
+
+  Quick setup:
+    1. Deploy main.py to a server (e.g. Railway, Render, VPS).
+    2. In capacitor.config.json set: "server": { "url": "https://your-server.com" }
+       — OR —
+       Change ANYDOWN_SERVER_URL below to your deployed server's URL.
+    3. Run: npm run build:www && npm run cap:sync
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #121319;
+    --ink: #F5F5F0;
+    --panel: #1B1C24;
+    --muted: #9a9dae;
+    --yellow: #FFD93D;
+    --blue: #6E93FF;
+    --green: #3ED9A0;
+    --coral: #FF8367;
+    --shadow: 6px 6px 0 var(--ink);
+    --shadow-sm: 4px 4px 0 var(--ink);
+    --border: 3px solid var(--ink);
+    --display: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --body: 'Inter', sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:var(--body); min-height:100vh; }
+  body{
+    background-image: radial-gradient(rgba(245,245,240,0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -8px -8px;
+    display:flex; justify-content:center;
+    padding: 48px 20px 90px;
+  }
+  .stage{ width:100%; max-width:720px; }
+  .term{ background: var(--panel); border: var(--border); box-shadow: 8px 8px 0 var(--ink); border-radius: 4px; overflow: hidden; }
+  .term-bar{ display:flex; align-items:center; gap:14px; padding: 12px 18px; background: var(--yellow); border-bottom: var(--border); }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:12px; height:12px; border-radius:50%; border:2px solid var(--ink); }
+  .dot.r{ background:#FF8367; } .dot.y{ background:#111; } .dot.g{ background:#3ED9A0; }
+  .term-title{ font-family:var(--mono); font-size:12.5px; font-weight:700; color:#111; }
+  .term-body{ padding: 36px 36px 40px; }
+  @media (max-width:560px){ .term-body{ padding:24px 18px 28px; } }
+  .eyebrow{ display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.08em; color: #111; background: var(--green); border: 2px solid var(--ink); padding: 5px 12px; border-radius:100px; text-transform:uppercase; }
+  h1.wordmark{ font-family: var(--display); font-weight:700; font-size:44px; letter-spacing:-0.01em; margin:18px 0 8px; line-height:1; }
+  .tagline{ font-size:16px; color:var(--muted); line-height:1.55; max-width:48ch; margin:0 0 28px; }
+  .tagline b{ color:var(--ink); }
+  .prompt-row{ font-family:var(--mono); font-size:12.5px; color:var(--muted); margin-bottom:10px; }
+  .prompt-row .path{ color:var(--green); font-weight:700; }
+  .input-shell{ display:flex; align-items:center; gap:10px; background:var(--panel); border: var(--border); border-radius:6px; padding: 4px 4px 4px 16px; box-shadow: var(--shadow-sm); }
+  .input-shell .caret{ font-family:var(--mono); font-weight:800; }
+  .input-shell input{ flex:1; background:transparent; border:none; outline:none; color:var(--ink); font-family:var(--mono); font-size:14.5px; padding:13px 6px; min-width:0; }
+  .input-shell input::placeholder{ color:#6d707e; }
+  .fetch-btn{ font-family: var(--display); font-weight:700; font-size:14.5px; color: #111; background: var(--yellow); border: var(--border); border-radius:5px; padding: 12px 18px; cursor:pointer; white-space:nowrap; box-shadow: var(--shadow-sm); transition: transform .08s ease, box-shadow .08s ease; }
+  .fetch-btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+  .fetch-btn:active{ transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+  .fetch-btn:disabled{ opacity:.55; cursor:progress; }
+  .hint{ margin-top:14px; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:7px; }
+  .error-msg{ margin-top:12px; font-family:var(--mono); font-size:12.5px; font-weight:700; color:#FF6B6B; display:none; }
+  .error-msg.show{ display:block; }
+  .loading-wrap{ display:none; }
+  .loading-wrap.show{ display:block; }
+  .loading-line{ font-family:var(--mono); font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:10px; padding:5px 0; opacity:0; }
+  .loading-line.on{ opacity:1; animation: fadein .2s ease both; }
+  .loading-line .ok{ color:var(--green); font-weight:800; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(3px);} to{opacity:1; transform:translateY(0);} }
+  .spinner{ width:13px; height:13px; border-radius:50%; border:2px solid #3a3c48; border-top-color:var(--ink); animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .screen{ display:none; } .screen.active{ display:block; }
+  .back-link{ display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:12.5px; font-weight:700; color:var(--ink); background:none; border:none; cursor:pointer; padding:0 0 20px; }
+  .back-link:hover{ text-decoration:underline; }
+  .video-card{ display:flex; gap:16px; background:var(--panel); border: var(--border); border-radius:6px; box-shadow: var(--shadow-sm); padding: 14px; margin-bottom: 30px; }
+  .thumb{ width:128px; height:84px; border-radius:4px; flex-shrink:0; border: 2px solid var(--ink); background: linear-gradient(135deg, var(--blue), var(--green) 120%); position:relative; overflow:hidden; }
+  .thumb .play{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:50%; background:var(--ink); border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; }
+  .thumb .dur{ position:absolute; right:5px; bottom:5px; font-family:var(--mono); font-size:10.5px; font-weight:700; background:var(--ink); color:#111; border:1.5px solid var(--ink); padding:1px 5px; border-radius:3px; }
+  .video-meta{ min-width:0; display:flex; flex-direction:column; justify-content:center; gap:5px; }
+  .video-meta .status{ font-family:var(--mono); font-size:11px; font-weight:800; color:var(--green); letter-spacing:.05em; text-transform:uppercase; }
+  .video-meta h3{ margin:0; font-family:var(--display); font-size:17px; font-weight:700; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .video-meta .chan{ font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .section-label{ font-family: var(--mono); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color: var(--ink); margin: 0 0 14px; display:flex; align-items:center; gap:10px; }
+  .section-label::after{ content:""; flex:1; height:2px; background:var(--ink); }
+  .formats{ display:flex; flex-direction:column; gap:14px; margin-bottom:8px; }
+  .fmt-card{ display:flex; align-items:center; gap:16px; background:var(--panel); border: var(--border); border-radius:6px; box-shadow: var(--shadow-sm); padding: 16px 18px; transition: transform .08s ease, box-shadow .08s ease; }
+  .fmt-card:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+  .fmt-icon{ width:42px; height:42px; border-radius:6px; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .fmt-card.full .fmt-icon{ background: var(--blue); color:#111; }
+  .fmt-card.audio .fmt-icon{ background: var(--green); color:#111; }
+  .fmt-card.speed .fmt-icon{ background: var(--coral); color:#111; }
+  .fmt-info{ flex:1; min-width:0; }
+  .fmt-info .fmt-name{ font-family:var(--display); font-weight:700; font-size:15px; margin-bottom:4px; }
+  .fmt-info .fmt-badges{ font-family:var(--mono); font-size:11.5px; color:var(--muted); display:flex; gap:7px; flex-wrap:wrap; }
+  .fmt-info .fmt-badges span{ background:#22232E; border:1.5px solid var(--ink); padding:2px 7px; border-radius:4px; font-weight:600; color:var(--ink); }
+  .pull-btn{ font-family: var(--display); font-size:13px; font-weight:700; padding: 12px 16px; border-radius:5px; border: var(--border); cursor:pointer; white-space:nowrap; flex-shrink:0; min-width:150px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow: var(--shadow-sm); transition: transform .08s ease, box-shadow .08s ease, opacity .1s ease; }
+  .pull-btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+  .pull-btn:active{ transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+  .pull-btn:disabled{ cursor:default; }
+  .fmt-card.full .pull-btn{ background: var(--blue); color:#111; }
+  .fmt-card.audio .pull-btn{ background: var(--green); color:#111; }
+  .fmt-card.speed .pull-btn{ background: var(--coral); color:#111; }
+  .pull-btn .mini-spin{ width:12px; height:12px; border-radius:50%; border:2px solid rgba(17,17,17,0.35); border-top-color:#111; animation:spin .6s linear infinite; display:none; }
+  .pull-btn.working .mini-spin{ display:inline-block; }
+  .pull-btn.working .label-text{ display:none; }
+  .again-row{ text-align:center; margin-top:32px; padding-top:26px; border-top: 3px dashed var(--ink); }
+  .again-btn{ font-family: var(--display); font-weight:700; font-size:14px; color:var(--ink); background:var(--panel); border: var(--border); border-radius:6px; padding: 12px 22px; cursor:pointer; box-shadow: var(--shadow-sm); transition: transform .08s ease, box-shadow .08s ease; }
+  .again-btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); background:var(--yellow); color:#111; }
+  .again-btn:active{ transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--ink); }
+  footer.note{ text-align:center; margin-top:22px; font-size:12px; color:var(--muted); font-family:var(--mono); }
+</style>
+</head>
+<body>
+
+<!-- ▶ CONFIGURE YOUR SERVER URL HERE ◀
+     Replace the empty string with your deployed Flask server URL, e.g.:
+     window.ANYDOWN_SERVER_URL = 'https://anydown.yourserver.com';
+     Leave blank to auto-detect from window.location.origin (works in browser).
+-->
+<script>window.ANYDOWN_SERVER_URL = '';</script>
+
+<div class="stage">
+
+  <!-- ============ HOME SCREEN ============ -->
+  <div class="screen active" id="home-screen">
+    <div class="term">
+      <div class="term-bar">
+        <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <div class="term-title">anydown — fetch.sh</div>
+      </div>
+      <div class="term-body">
+        <span class="eyebrow">Powered by yt-dlp</span>
+        <h1 class="wordmark">ANYDOWN</h1>
+        <p class="tagline">Download any YouTube video as <b>full video, audio only, or a fast lightweight file</b> — in the quality you choose.</p>
+        <div id="idle-block">
+          <div class="prompt-row"><span class="path">~/anydown</span> $ paste-link</div>
+          <div class="input-shell">
+            <span class="caret">›</span>
+            <input id="link-input" type="text" placeholder="Paste YouTube video link here" autocomplete="off" spellcheck="false">
+            <button class="fetch-btn" id="fetch-btn" onclick="startFetch()">Fetch Video</button>
+          </div>
+          <div class="error-msg" id="error-msg">That doesn't look like a valid YouTube link. Try again.</div>
+          <div class="hint">Works with regular videos, Shorts, and youtu.be links.</div>
+        </div>
+        <div class="loading-wrap" id="loading-wrap">
+          <div class="loading-line" id="line1"><span class="spinner"></span><span>Reading link…</span></div>
+          <div class="loading-line" id="line2"><span class="spinner"></span><span>Connecting to yt-dlp…</span></div>
+          <div class="loading-line" id="line3"><span class="spinner"></span><span>Loading available formats…</span></div>
+        </div>
+      </div>
+    </div>
+    <footer class="note">Powered by yt-dlp + Flask · configure ANYDOWN_SERVER_URL for Android</footer>
+  </div>
+
+  <!-- ============ RESULTS SCREEN ============ -->
+  <div class="screen" id="results-screen">
+    <div class="term">
+      <div class="term-bar">
+        <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <div class="term-title">anydown — results.sh</div>
+      </div>
+      <div class="term-body">
+        <button class="back-link" onclick="resetHome()">← New Link</button>
+        <div class="video-card">
+          <div class="thumb" id="result-thumb">
+            <div class="play"><svg width="11" height="11" viewBox="0 0 24 24" fill="#111"><path d="M8 5v14l11-7z"/></svg></div>
+            <span class="dur" id="result-dur">0:00</span>
+          </div>
+          <div class="video-meta">
+            <span class="status">Video found</span>
+            <h3 id="result-title">—</h3>
+            <span class="chan" id="result-chan">—</span>
+          </div>
+        </div>
+        <p class="section-label">Choose download option</p>
+        <div class="formats">
+          <div class="fmt-card full">
+            <div class="fmt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="15" height="16" rx="2"/><path d="M17 8l5-3v14l-5-3"/></svg></div>
+            <div class="fmt-info">
+              <div class="fmt-name">Video + Audio (Best Quality)</div>
+              <div class="fmt-badges"><span>MP4</span><span>Up to 4K</span><span id="size-best">~? MB</span></div>
+            </div>
+            <button class="pull-btn" onclick="pull(this, 'best')"><span class="mini-spin"></span><span class="label-text">Download Video</span></button>
+          </div>
+          <div class="fmt-card audio">
+            <div class="fmt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+            <div class="fmt-info">
+              <div class="fmt-name">Audio Only</div>
+              <div class="fmt-badges"><span>MP3</span><span>320 kbps</span><span id="size-audio">~? MB</span></div>
+            </div>
+            <button class="pull-btn" onclick="pull(this, 'audio')"><span class="mini-spin"></span><span class="label-text">Download Audio</span></button>
+          </div>
+          <div class="fmt-card speed">
+            <div class="fmt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+            <div class="fmt-info">
+              <div class="fmt-name">Fast Download (Video + Audio)</div>
+              <div class="fmt-badges"><span>MP4</span><span>720p</span><span id="size-fast">~? MB</span></div>
+            </div>
+            <button class="pull-btn" onclick="pull(this, 'fast')"><span class="mini-spin"></span><span class="label-text">Download Fast</span></button>
+          </div>
+        </div>
+        <div class="again-row">
+          <button class="again-btn" onclick="resetHome()">Download Another Video</button>
+        </div>
+      </div>
+    </div>
+    <footer class="note">Powered by yt-dlp + Flask · configure ANYDOWN_SERVER_URL for Android</footer>
+  </div>
+
+</div>
+
+<script>
+  const homeScreen    = document.getElementById('home-screen');
+  const resultsScreen = document.getElementById('results-screen');
+  const idleBlock     = document.getElementById('idle-block');
+  const loadingWrap   = document.getElementById('loading-wrap');
+  const linkInput     = document.getElementById('link-input');
+  const fetchBtn      = document.getElementById('fetch-btn');
+  const errorMsg      = document.getElementById('error-msg');
+
+  const API_BASE = window.ANYDOWN_SERVER_URL ||
+    ((window.Capacitor && window.Capacitor.isNativePlatform())
+      ? 'https://YOUR_FLASK_SERVER_URL_HERE'
+      : window.location.origin);
+
+  let _currentUrl = '';
+
+  function looksLikeYoutube(v) { return /youtu\.?be|youtube\.com/i.test(v.trim()); }
+  function tickLine(id) { const el=document.getElementById(id); const sp=el.querySelector('.spinner'); if(sp)sp.outerHTML='<span class="ok">✓</span>'; }
+  function showLine(id) { document.getElementById(id).classList.add('on'); }
+  function setError(msg) { errorMsg.textContent=msg||'Something went wrong.'; errorMsg.classList.add('show'); }
+
+  async function startFetch() {
+    const val = linkInput.value.trim();
+    if (!looksLikeYoutube(val) || val.length < 8) { setError("That doesn't look like a valid YouTube link. Try again."); linkInput.focus(); return; }
+    errorMsg.classList.remove('show');
+    fetchBtn.disabled = true;
+    idleBlock.style.display = 'none';
+    loadingWrap.classList.add('show');
+    showLine('line1');
+    await new Promise(r => setTimeout(r, 500));
+    tickLine('line1'); showLine('line2');
+    let data;
+    try {
+      const res = await fetch(`${API_BASE}/api/info?url=${encodeURIComponent(val)}`);
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch video info');
+    } catch (err) {
+      loadingWrap.classList.remove('show');
+      idleBlock.style.display = '';
+      fetchBtn.disabled = false;
+      ['line1','line2','line3'].forEach(resetLine);
+      setError(err.message || 'Could not reach server.');
+      return;
+    }
+    tickLine('line2'); showLine('line3');
+    await new Promise(r => setTimeout(r, 350));
+    tickLine('line3');
+    await new Promise(r => setTimeout(r, 200));
+    _currentUrl = val;
+    showResults(data);
+  }
+
+  function showResults(data) {
+    document.getElementById('result-title').textContent = data.title   || 'Unknown Title';
+    document.getElementById('result-chan').textContent  = data.channel || 'Unknown Channel';
+    document.getElementById('result-dur').textContent  = data.duration_str || '—';
+    const thumb = document.getElementById('result-thumb');
+    if (data.thumbnail) {
+      let img = thumb.querySelector('img.thumb-img');
+      if (!img) { img=document.createElement('img'); img.className='thumb-img'; img.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;'; img.referrerPolicy='no-referrer'; thumb.insertBefore(img, thumb.firstChild); }
+      img.src = data.thumbnail;
+    }
+    const sz = data.sizes || {};
+    document.getElementById('size-best').textContent  = sz.best  || '~? MB';
+    document.getElementById('size-audio').textContent = sz.audio || '~? MB';
+    document.getElementById('size-fast').textContent  = sz.fast  || '~? MB';
+    homeScreen.classList.remove('active');
+    resultsScreen.classList.add('active');
+  }
+
+  async function pull(btn, format) {
+    if (btn.classList.contains('working')) return;
+    const label = btn.querySelector('.label-text');
+    if (!btn.dataset.orig) btn.dataset.orig = label.textContent;
+    btn.classList.add('working'); btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/api/download?url=${encodeURIComponent(_currentUrl)}&format=${format}`);
+      if (!res.ok) { let e='Download failed'; try{e=(await res.json()).error||e;}catch(_){} throw new Error(e); }
+      const blob = await res.blob();
+      const disp = res.headers.get('Content-Disposition') || '';
+      let filename = format === 'audio' ? 'audio.mp3' : 'video.mp4';
+      const m = disp.match(/filename\*?=(?:UTF-8'')?["']?([^;"'\r\n]+)/i);
+      if (m) filename = decodeURIComponent(m[1].replace(/['"]/g,'').trim());
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=blobUrl; a.download=filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      btn.classList.remove('working'); label.textContent='Downloaded ✓'; btn.disabled=false;
+      setTimeout(() => { label.textContent=btn.dataset.orig; }, 2200);
+    } catch(err) {
+      btn.classList.remove('working'); btn.disabled=false;
+      const short = (err.message || 'Download failed').slice(0, 60);
+      label.textContent='✕ ' + short;
+      setTimeout(() => { label.textContent=btn.dataset.orig; }, 3500);
+    }
+  }
+
+  function resetLine(id) {
+    const el=document.getElementById(id); el.classList.remove('on');
+    const t={line1:'Reading link…',line2:'Connecting to yt-dlp…',line3:'Loading available formats…'};
+    el.innerHTML=`<span class="spinner"></span><span>${t[id]}</span>`;
+  }
+
+  function resetHome() {
+    resultsScreen.classList.remove('active'); homeScreen.classList.add('active');
+    idleBlock.style.display=''; loadingWrap.classList.remove('show');
+    ['line1','line2','line3'].forEach(resetLine);
+    linkInput.value=''; fetchBtn.disabled=false; _currentUrl='';
+    errorMsg.classList.remove('show');
+    document.querySelectorAll('.pull-btn').forEach(btn => {
+      btn.classList.remove('working'); btn.disabled=false;
+      const lbl=btn.querySelector('.label-text'); if(lbl&&btn.dataset.orig)lbl.textContent=btn.dataset.orig;
+    });
+  }
+
+  linkInput.addEventListener('keydown', e => { if(e.key==='Enter')startFetch(); });
+</script>
+</body>
+</html>
