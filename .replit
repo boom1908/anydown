@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "ANYDOWN Flask Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/api-server: API Server"
+
 [[workflows.workflow]]
 name = "ANYDOWN Flask Server"
 author = "agent"
