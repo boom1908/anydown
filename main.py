@@ -77,6 +77,7 @@ def get_info():
         return jsonify({"error": "URL is required"}), 400
 
     ydl_opts = {
+        "cookiefile": "cookies.txt",
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -108,6 +109,105 @@ def get_info():
         "duration_str": fmt_duration(info.get("duration", 0)),
         "thumbnail":    info.get("thumbnail", ""),
         "sizes": {
+            "best":  fmt_size(sz_best),
+            "audio": fmt_size(sz_audio),
+            "fast":  fmt_size(sz_fast),
+        },
+    })
+
+
+@app.route("/api/download")
+def download():
+    url  = request.args.get("url", "").strip()
+    fmt  = request.args.get("format", "best")   # best | audio | fast
+
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
+    tmpdir = tempfile.mkdtemp(prefix="anydown_")
+
+    if fmt == "audio":
+        format_spec = "bestaudio[ext=m4a]/bestaudio/best"
+        postprocessors = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "320",
+        }]
+    elif fmt == "fast":
+        format_spec = (
+            "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]"
+            "/bestvideo[height<=720]+bestaudio"
+            "/best[height<=720]/best"
+        )
+        postprocessors = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+    else:   # best
+        format_spec = (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]"
+            "/bestvideo+bestaudio/best"
+        )
+        postprocessors = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
+
+    ydl_opts = {
+        "cookiefile": "cookies.txt",
+        "format": format_spec,
+        "outtmpl": os.path.join(tmpdir, "%(title)s.%(ext)s"),
+        "postprocessors": postprocessors,
+        "quiet": True,
+        "no_warnings": True,
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+    except yt_dlp.utils.DownloadError as e:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        msg = str(e)
+        if "ERROR:" in msg:
+            msg = msg.split("ERROR:")[-1].strip()
+        return jsonify({"error": msg}), 422
+    except Exception as e:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return jsonify({"error": str(e)}), 500
+
+    # Find the output file (there should be exactly one)
+    files = os.listdir(tmpdir)
+    if not files:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return jsonify({"error": "Download failed — output file not found"}), 500
+
+    filepath = os.path.join(tmpdir, files[0])
+    ext = os.path.splitext(files[0])[1].lstrip(".").lower()
+
+    # Build a safe download filename
+    title     = info.get("title", "download")
+    safe_name = re.sub(r'[\\/*?:"<>|]', "", title)[:100].strip()
+    dl_name   = f"{safe_name}.{ext}"
+
+    mimetype = "audio/mpeg" if ext == "mp3" else "video/mp4"
+
+    # Read the entire file into memory, then immediately delete the temp dir.
+    # This avoids the race condition where a background cleanup thread deletes
+    # the file before Flask finishes streaming it to a slow client.
+    try:
+        with open(filepath, "rb") as fh:
+            file_bytes = io.BytesIO(fh.read())
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    file_bytes.seek(0)
+    return send_file(
+        file_bytes,
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=dl_name,
+    )
+
+
+# ───────────────────────────── entry point ─────────────────────────────
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)
             "best":  fmt_size(sz_best),
             "audio": fmt_size(sz_audio),
             "fast":  fmt_size(sz_fast),
