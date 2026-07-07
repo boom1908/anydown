@@ -47,9 +47,14 @@ jobs:
         run: npm run build:www
 
       - name: Inject server URL (optional)
-        if: ${{ secrets.ANYDOWN_SERVER_URL != '' }}
+        env:
+          SERVER_URL: ${{ secrets.ANYDOWN_SERVER_URL }}
         run: |
-          sed -i "s|window.ANYDOWN_SERVER_URL = '';|window.ANYDOWN_SERVER_URL = '${{ secrets.ANYDOWN_SERVER_URL }}';|" www/index.html
+          if [ -n "$SERVER_URL" ]; then
+            sed -i "s|window.ANYDOWN_SERVER_URL = '';|window.ANYDOWN_SERVER_URL = '$SERVER_URL';|" www/index.html
+          else
+            echo "No server URL secret found, skipping injection."
+          fi
 
       # ── 7. Add Android platform (only when android/ doesn't exist) ─
       - name: Add Android platform
