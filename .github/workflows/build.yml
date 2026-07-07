@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+      
 
       # ── 3. Java JDK (required by Gradle / Android build tools) ─────
       - name: Set up JDK 17
