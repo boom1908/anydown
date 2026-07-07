@@ -73,6 +73,7 @@ def get_info():
 
     ydl_opts = {
         "cookiefile": "cookies.txt",
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -142,6 +143,7 @@ def download():
 
     ydl_opts = {
         "cookiefile": "cookies.txt",
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
         "format": format_spec,
         "outtmpl": os.path.join(tmpdir, "%(title)s.%(ext)s"),
         "postprocessors": postprocessors,
