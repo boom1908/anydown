@@ -4,7 +4,7 @@ import re
 import tempfile
 import shutil
 
-from flask import Flask, request, jsonify, send_file, render_template, after_this_request
+from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
 import yt_dlp
 
@@ -72,8 +72,12 @@ def get_info():
         return jsonify({"error": "URL is required"}), 400
 
     ydl_opts = {
-        "cookiefile": "cookies.txt",
-        "extractor_args": {"youtube": {"player_client": ["android"]}},
+        "cookiefile": "cookies.txt",  # Using the burner account cookies
+        "extractor_args": {
+            "youtubepot-bgutilhttp": {
+                "base_url": ["https://anydown-pot.onrender.com"]
+            }
+        },
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
@@ -142,8 +146,12 @@ def download():
         postprocessors = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
 
     ydl_opts = {
-        "cookiefile": "cookies.txt",
-        "extractor_args": {"youtube": {"player_client": ["android"]}},
+        "cookiefile": "cookies.txt",  # Using the burner account cookies
+        "extractor_args": {
+            "youtubepot-bgutilhttp": {
+                "base_url": ["https://anydown-pot.onrender.com"]
+            }
+        },
         "format": format_spec,
         "outtmpl": os.path.join(tmpdir, "%(title)s.%(ext)s"),
         "postprocessors": postprocessors,
