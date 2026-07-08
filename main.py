@@ -3,10 +3,50 @@ import os
 import re
 import tempfile
 import shutil
+import urllib.request
+import zipfile
+import stat
 
 from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
 import yt_dlp
+
+
+# --- VIBECODER AUTOMATION: Download JS Runtime if missing ---
+def ensure_js_runtime():
+    deno_dir = os.path.join(os.getcwd(), ".deno_bin")
+    deno_exe = os.path.join(deno_dir, "deno")
+    
+    if not os.path.exists(deno_exe):
+        try:
+            print("Downloading Deno (JS Runtime) for yt-dlp...")
+            os.makedirs(deno_dir, exist_ok=True)
+            zip_path = os.path.join(deno_dir, "deno.zip")
+            
+            # Fetch the latest Deno runtime for Linux directly into the cloud server
+            url = "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+                shutil.copyfileobj(response, out_file)
+                
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(deno_dir)
+                
+            os.remove(zip_path)
+            # Mark the downloaded engine as executable
+            st = os.stat(deno_exe)
+            os.chmod(deno_exe, st.st_mode | stat.S_IEXEC)
+            print("Deno JS Runtime installed successfully.")
+        except Exception as e:
+            print(f"Warning: Failed to install Deno: {e}")
+
+    # Inject Deno into the system PATH so yt-dlp finds it instantly
+    if deno_dir not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = deno_dir + os.pathsep + os.environ.get("PATH", "")
+
+ensure_js_runtime()
+# ------------------------------------------------------------
+
 
 app = Flask(__name__)
 # CORS fully open: Android APK makes cross-origin requests to this server.
@@ -72,14 +112,12 @@ def get_info():
         return jsonify({"error": "URL is required"}), 400
 
     ydl_opts = {
-        # COOKIES COMPLETELY REMOVED to prevent instant bot blocks from expired sessions.
         "extractor_args": {
             "youtubepot-bgutilhttp": {
                 "base_url": ["https://anydown-pot.onrender.com"]
             }
         },
-        "verbose": True, # Turned on to verify PO token connection in Render logs
-        "quiet": False,
+        "quiet": True,
         "no_warnings": True,
         "skip_download": True,
     }
@@ -147,7 +185,6 @@ def download():
         postprocessors = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
 
     ydl_opts = {
-        # COOKIES COMPLETELY REMOVED to prevent instant bot blocks from expired sessions.
         "extractor_args": {
             "youtubepot-bgutilhttp": {
                 "base_url": ["https://anydown-pot.onrender.com"]
@@ -156,8 +193,7 @@ def download():
         "format": format_spec,
         "outtmpl": os.path.join(tmpdir, "%(title)s.%(ext)s"),
         "postprocessors": postprocessors,
-        "verbose": True, # Turned on to verify PO token connection in Render logs
-        "quiet": False,
+        "quiet": True,
         "no_warnings": True,
     }
 
