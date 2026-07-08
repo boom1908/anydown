@@ -72,13 +72,14 @@ def get_info():
         return jsonify({"error": "URL is required"}), 400
 
     ydl_opts = {
-        "cookiefile": "cookies.txt",  # Using the burner account cookies
+        # COOKIES COMPLETELY REMOVED to prevent instant bot blocks from expired sessions.
         "extractor_args": {
             "youtubepot-bgutilhttp": {
                 "base_url": ["https://anydown-pot.onrender.com"]
             }
         },
-        "quiet": True,
+        "verbose": True, # Turned on to verify PO token connection in Render logs
+        "quiet": False,
         "no_warnings": True,
         "skip_download": True,
     }
@@ -146,7 +147,7 @@ def download():
         postprocessors = [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}]
 
     ydl_opts = {
-        "cookiefile": "cookies.txt",  # Using the burner account cookies
+        # COOKIES COMPLETELY REMOVED to prevent instant bot blocks from expired sessions.
         "extractor_args": {
             "youtubepot-bgutilhttp": {
                 "base_url": ["https://anydown-pot.onrender.com"]
@@ -155,7 +156,8 @@ def download():
         "format": format_spec,
         "outtmpl": os.path.join(tmpdir, "%(title)s.%(ext)s"),
         "postprocessors": postprocessors,
-        "quiet": True,
+        "verbose": True, # Turned on to verify PO token connection in Render logs
+        "quiet": False,
         "no_warnings": True,
     }
 
